@@ -27,6 +27,13 @@ interface UserSocket extends Socket {
 }
 
 const app: Express = express();
+
+app.use(cors({
+  origin: 'https://tycoon.onrender.com'
+}));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
 const port = process.env.PORT || 5000;
 const server = createServer(app);
 const io = new Server(server, {
@@ -34,12 +41,6 @@ const io = new Server(server, {
     origin: 'https://tycoon.onrender.com'
   }
 });
-
-app.use(cors({
-  origin: 'https://tycoon.onrender.com'
-}));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
 //app.use(express.static(path.join(__dirname, '../front/build')));
 
 const activeRoomCodes = new Set<string>();
