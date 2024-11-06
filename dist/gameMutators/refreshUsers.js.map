@@ -1,0 +1,1 @@
+{"version":3,"file":"refreshUsers.js","sourceRoot":"","sources":["../../src/gameMutators/refreshUsers.ts"],"names":[],"mappings":";;AAEA,MAAM,YAAY,GAAG,CAAC,KAAa,EAAE,SAAoB,EAAE,EAAE;IACzD,OAAO;QACH,GAAG,SAAS;QACZ,KAAK,EAAE,KAAK;KACf,CAAA;AACL,CAAC,CAAA;AAED,kBAAe,YAAY,CAAC"}
