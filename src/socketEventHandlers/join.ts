@@ -1,6 +1,5 @@
 import { Message, User, UserSocket } from "../types";
 import defaultGameState from '../gameMutators/defaultGameState';
-import refreshUsers from "../gameMutators/refreshUsers";
 
 const join = async (roomCode: string, newPlayerName: string, newPlayerImage: string, socket: UserSocket, io: any) => {
     try {
@@ -24,11 +23,12 @@ const join = async (roomCode: string, newPlayerName: string, newPlayerImage: str
         socket.join(roomCode);
         sockets = await io.in(roomCode).fetchSockets(); 
         const users: User[] = sockets.map((cur: UserSocket) => cur.user);
+        const newUsers: User[] = [...users, socket.user];
         let prevMessages: Message[] = sockets[0] && sockets[0].gameState && sockets[0].gameState.messages && sockets[0].gameState.messages.length > 0 ? sockets[0].gameState.messages : [];
         const message = `${newPlayerName} joined the room.`;
         prevMessages = [...prevMessages, { sender: null, content: message }];
-        const usersCopy: User[] = JSON.parse(JSON.stringify(users));
-        sockets.forEach(cur => cur.gameState = { ...defaultGameState, users: users, host: usersCopy[0].name, messages: prevMessages, roomCode: roomCode });
+        const newUsersCopy: User[] = JSON.parse(JSON.stringify(users));
+        sockets.forEach(cur => cur.gameState = { ...defaultGameState, users: newUsers, host: newUsersCopy[0].name, messages: prevMessages, roomCode: roomCode });
         io.to(roomCode).emit('update game state', socket.gameState);
         console.log(message);
     } catch(err) {
