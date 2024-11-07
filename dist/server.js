@@ -24,12 +24,16 @@ const sendChatMessage_1 = __importDefault(require("./socketEventHandlers/sendCha
 const sendEventChatMessage_1 = __importDefault(require("./socketEventHandlers/sendEventChatMessage"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const port = process.env.PORT || 5000;
-const server = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(server);
 app.use((0, cors_1.default)());
 app.use(express_1.default.urlencoded({ extended: false }));
 app.use(express_1.default.json());
+const port = process.env.PORT || 5000;
+const server = (0, http_1.createServer)(app);
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: ['http://localhost:3000', 'https://tycoon.onrender.com']
+    }
+});
 //app.use(express.static(path.join(__dirname, '../front/build')));
 const activeRoomCodes = new Set();
 io.on('connection', (socket) => {
@@ -74,7 +78,13 @@ io.on('connection', (socket) => {
     });
     socket.on('disconnect', () => {
         try {
-            console.log(socket.user.name + ' disconnected');
+            for (const room of socket.rooms) {
+                if (room !== socket.id) {
+                    socket.leave(room);
+                    (0, leave_1.default)(room, activeRoomCodes, socket, io);
+                    console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
+                }
+            }
         }
         catch (err) {
             console.log('There was an error disconnecting a socket: ' + err);
@@ -117,6 +127,6 @@ app.get('*', (req, res) => {
 });
 */
 server.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+    console.log(`Server is running at ${port}`);
 });
 //# sourceMappingURL=server.js.map

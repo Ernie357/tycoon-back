@@ -22,12 +22,13 @@ const join = async (roomCode, newPlayerName, newPlayerImage, socket, io) => {
                 return;
             }
         }
+        socket.roomCode = roomCode;
         socket.user = { name: newPlayerName, image: newPlayerImage, cards: [], points: 0, rank: '', possibleTradeCardNumbers: [], cardsFromTrade: [] };
         socket.join(roomCode);
         sockets = await io.in(roomCode).fetchSockets();
         const users = sockets.map((cur) => cur.user);
         let prevMessages = sockets[0] && sockets[0].gameState && sockets[0].gameState.messages && sockets[0].gameState.messages.length > 0 ? sockets[0].gameState.messages : [];
-        const message = `${newPlayerName} joined the room.`;
+        const message = `${newPlayerName} joined the room!!!`;
         prevMessages = [...prevMessages, { sender: null, content: message }];
         const usersCopy = JSON.parse(JSON.stringify(users));
         sockets.map(cur => cur.gameState = { ...(0, refreshUsers_1.default)(users, defaultGameState_1.default), host: usersCopy[0].name, messages: prevMessages, roomCode: roomCode });
