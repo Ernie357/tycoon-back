@@ -29,7 +29,9 @@ interface UserSocket extends Socket {
 const app: Express = express();
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://personatycoon.netlify.app', 'https://personatycoon.com', 'https://www.personatycoon.com']
+  origin: ['http://localhost:3000', 'https://personatycoon.netlify.app', 'https://personatycoon.com', 'https://www.personatycoon.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
