@@ -88,8 +88,8 @@ io.on('connection', (socket: UserSocket) => {
       for (const room of socket.rooms) {
         if (room !== socket.id) {
           socket.leave(room);
-          console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
           leave(room, activeRoomCodes, socket, io);
+          console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
         }
       }
     } catch(err) {
