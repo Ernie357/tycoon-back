@@ -29,7 +29,6 @@ const leave = async (roomCode: string, activeRoomCodes: Set<string>, socket: Use
         io.to(roomCode).emit('update game state', newState);
         console.log('update game state has been emitted for leave with the following gamestate: ' + JSON.stringify(newState));
         socket.leave(roomCode);
-        socket.disconnect();
     } catch(err) {
         console.log('player leaving error in room ' + roomCode + ': ' + err);
     }

@@ -87,11 +87,9 @@ io.on('connection', (socket: UserSocket) => {
     try {
       console.log(`${socket.user.name} disconnected.`);
       for (const room of socket.rooms) {
-        if (room !== socket.id) {
-          socket.leave(room);
-          leave(room, activeRoomCodes, socket, io);
-          console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
-        }
+        socket.leave(room);
+        leave(room, activeRoomCodes, socket, io);
+        console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
       }
       socket.disconnect();
     } catch(err) {
@@ -127,8 +125,6 @@ app.get('/isRoomCodeValid', (req: Request, res: Response) => {
     res.send(false);
   }
 });
-
-app.get('/')
 
 /*
 app.get('*', (req, res) => {
