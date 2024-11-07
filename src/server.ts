@@ -90,10 +90,10 @@ io.on('connection', (socket: UserSocket) => {
         if (room !== socket.id) {
           socket.leave(room);
           leave(room, activeRoomCodes, socket, io);
-          socket.disconnect();
           console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
         }
       }
+      socket.disconnect();
     } catch(err) {
       console.log('There was an error disconnecting a socket: ' + err);
     }
