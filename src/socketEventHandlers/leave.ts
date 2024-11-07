@@ -1,8 +1,8 @@
-import { User, UserSocket } from "../types";
+import { GameState, User, UserSocket } from "../types";
 
 const leave = async (roomCode: string, activeRoomCodes: Set<string>, socket: UserSocket, io: any) => {
     try {
-        const sockets = await io.in(roomCode).fetchSockets();
+        const sockets: UserSocket[] = await io.in(roomCode).fetchSockets();
         const leavingUsername = socket.user.name;
         const message = `${leavingUsername} left the room.`;
         console.log(message);
@@ -16,16 +16,17 @@ const leave = async (roomCode: string, activeRoomCodes: Set<string>, socket: Use
             activeRoomCodes.delete(roomCode);
             return;
         }
-        sockets.map((cur: UserSocket) => {
-            cur.gameState = {
-                ...cur.gameState,
-                users: newUsers,
-                activeUsers: newActiveUsers,
-                host: newUsers[0] && newUsers[0].name ? newUsers[0].name : '',
-                messages: [...cur.gameState.messages, { sender: null, content: message }]
-            }
+        const newState: GameState = {
+            ...sockets[0].gameState,
+            users: newUsers,
+            activeUsers: newActiveUsers,
+            host: newUsers[0] && newUsers[0].name ? newUsers[0].name : '',
+            messages: [...sockets[0].gameState.messages, { sender: null, content: message }]
+        }
+        sockets.forEach((cur: UserSocket) => {
+            cur.gameState = newState;
         });
-        io.to(roomCode).emit('update game state', socket.gameState);
+        io.to(roomCode).emit('update game state', newState);
         socket.leave(roomCode);
         socket.disconnect();
     } catch(err) {
