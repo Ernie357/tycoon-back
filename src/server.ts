@@ -29,7 +29,7 @@ interface UserSocket extends Socket {
 const app: Express = express();
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://personatycoon.netlify.app', 'https://personatycoon.com']
+  origin: ['http://localhost:3000', 'https://personatycoon.netlify.app', 'https://personatycoon.com', 'https://www.personatycoon.com']
 }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -38,7 +38,7 @@ const port = process.env.PORT || 5000;
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'https://personatycoon.netlify.app', 'https://personatycoon.com']
+    origin: ['http://localhost:3000', 'https://personatycoon.netlify.app', 'https://personatycoon.com', 'https://www.personatycoon.com']
   }
 });
 //app.use(express.static(path.join(__dirname, '../front/build')));
