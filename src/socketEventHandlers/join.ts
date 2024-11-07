@@ -19,6 +19,7 @@ const join = async (roomCode: string, newPlayerName: string, newPlayerImage: str
                 return;
             }
         }
+        socket.roomCode = roomCode;
         socket.user = { name: newPlayerName, image: newPlayerImage, cards: [], points: 0, rank: '', possibleTradeCardNumbers: [], cardsFromTrade: [] };
         socket.join(roomCode);
         sockets = await io.in(roomCode).fetchSockets(); 

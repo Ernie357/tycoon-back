@@ -41,6 +41,7 @@ export interface GameState {
 
 export interface UserSocket extends Socket {
     user: User,
+    roomCode?: string,
     gameState: GameState
   }
 
