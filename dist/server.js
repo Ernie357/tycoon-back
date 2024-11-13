@@ -22,23 +22,20 @@ const startNewRound_1 = __importDefault(require("./socketEventHandlers/startNewR
 const endGame_1 = __importDefault(require("./socketEventHandlers/endGame"));
 const sendChatMessage_1 = __importDefault(require("./socketEventHandlers/sendChatMessage"));
 const sendEventChatMessage_1 = __importDefault(require("./socketEventHandlers/sendEventChatMessage"));
+const disconnect_1 = __importDefault(require("./socketEventHandlers/disconnect"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.urlencoded({ extended: false }));
 app.use(express_1.default.json());
-const port = process.env.PORT || 5000;
+const port = 5001;
 const server = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(server, {
-    cors: {
-        origin: ['http://localhost:3000', 'https://tycoon.onrender.com']
-    }
-});
+const io = new socket_io_1.Server(server);
 //app.use(express.static(path.join(__dirname, '../front/build')));
 const activeRoomCodes = new Set();
 io.on('connection', (socket) => {
-    socket.on('join', (roomCode, playerName, playerImage) => {
-        (0, join_1.default)(roomCode, playerName, playerImage, socket, io);
+    socket.on('join', (gameState, roomCode, playerName, playerImage) => {
+        (0, join_1.default)(gameState, roomCode, playerName, playerImage, socket, io);
     });
     socket.on('leave', (roomCode) => {
         (0, leave_1.default)(roomCode, activeRoomCodes, socket, io);
@@ -77,24 +74,14 @@ io.on('connection', (socket) => {
         (0, sendEventChatMessage_1.default)(roomCode, message, socket, io);
     });
     socket.on('disconnect', () => {
-        try {
-            for (const room of socket.rooms) {
-                if (room !== socket.id) {
-                    socket.leave(room);
-                    (0, leave_1.default)(room, activeRoomCodes, socket, io);
-                    console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
-                }
-            }
-        }
-        catch (err) {
-            console.log('There was an error disconnecting a socket: ' + err);
-        }
+        (0, disconnect_1.default)(socket, activeRoomCodes);
     });
 });
 app.get('/roomcode', (req, res) => {
     try {
         let code;
         do {
+            console.log('grabbing a code!');
             code = Math.floor(10000 + Math.random() * 90000).toString();
         } while (activeRoomCodes.has(code));
         activeRoomCodes.add(code);
@@ -120,13 +107,12 @@ app.get('/isRoomCodeValid', (req, res) => {
         res.send(false);
     }
 });
-app.get('/');
 /*
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../front/build', 'index.html'));
 });
 */
 server.listen(port, () => {
-    console.log(`Server is running at ${port}`);
+    console.log(`Server is running at port ${port}`);
 });
 //# sourceMappingURL=server.js.map

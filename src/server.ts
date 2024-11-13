@@ -18,6 +18,7 @@ import startNewRound from "./socketEventHandlers/startNewRound";
 import endGame from "./socketEventHandlers/endGame";
 import sendChatMessage from "./socketEventHandlers/sendChatMessage";
 import sendEventChatMessage from "./socketEventHandlers/sendEventChatMessage";
+import disconnect from "./socketEventHandlers/disconnect";
 
 dotenv.config();
 
@@ -27,28 +28,21 @@ interface UserSocket extends Socket {
 }
 
 const app: Express = express();
-const frontUrl = process.env.FRONT_URL || "https://personatycoon.netlify.app";
 
-app.use(cors({
-  origin: frontUrl
-}));
+app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-const port = process.env.PORT || 5000;
+const port = 5001;
 const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: frontUrl
-  }
-});
+const io = new Server(server);
 //app.use(express.static(path.join(__dirname, '../front/build')));
 
 const activeRoomCodes = new Set<string>();
 
 io.on('connection', (socket: UserSocket) => {
-  socket.on('join', (roomCode: string, playerName: string, playerImage: string) => {
-    join(roomCode, playerName, playerImage, socket, io);
+  socket.on('join', (gameState: GameState, roomCode: string, playerName: string, playerImage: string) => {
+    join(gameState, roomCode, playerName, playerImage, socket, io);
   });
   socket.on('leave', (roomCode: string) => {
     leave(roomCode, activeRoomCodes, socket, io);
@@ -87,17 +81,7 @@ io.on('connection', (socket: UserSocket) => {
     sendEventChatMessage(roomCode, message, socket, io);
   });
   socket.on('disconnect', () => {
-    try {
-      console.log(`${socket.user.name} disconnected.`);
-      for (const room of socket.rooms) {
-        socket.leave(room);
-        leave(room, activeRoomCodes, socket, io);
-        console.log(`Socket ${socket.user.name} left room ${room} on disconnect.`);
-      }
-      socket.disconnect();
-    } catch(err) {
-      console.log('There was an error disconnecting a socket: ' + err);
-    }
+    disconnect(socket, activeRoomCodes);
   });
 });
 
@@ -105,6 +89,7 @@ app.get('/roomcode', (req: Request, res: Response) => {
   try {
     let code: string;
     do {
+        console.log('grabbing a code!');
         code = Math.floor(10000 + Math.random() * 90000).toString();
     } while (activeRoomCodes.has(code));
     activeRoomCodes.add(code); 

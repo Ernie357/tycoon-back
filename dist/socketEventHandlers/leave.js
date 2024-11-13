@@ -16,18 +16,32 @@ const leave = async (roomCode, activeRoomCodes, socket, io) => {
             activeRoomCodes.delete(roomCode);
             return;
         }
-        sockets.map((cur) => {
-            cur.gameState = {
-                ...cur.gameState,
-                users: newUsers,
-                activeUsers: newActiveUsers,
-                host: newUsers[0] && newUsers[0].name ? newUsers[0].name : '',
-                messages: [...cur.gameState.messages, { sender: null, content: message }]
-            };
+        let newTurnPlayer = socket.gameState.turnPlayer;
+        if (socket.gameState.turnPlayer === socket.user.name) {
+            sockets.forEach((cur, idx) => {
+                if (cur.user.name === socket.gameState.turnPlayer) {
+                    if (idx === sockets.length - 1) {
+                        newTurnPlayer = sockets[0].user.name;
+                    }
+                    else {
+                        newTurnPlayer = sockets[idx + 1].user.name;
+                    }
+                }
+            });
+        }
+        const newState = {
+            ...sockets[0].gameState,
+            users: newUsers,
+            activeUsers: newActiveUsers,
+            host: newUsers[0] && newUsers[0].name ? newUsers[0].name : '',
+            messages: [...sockets[0].gameState.messages, { sender: null, content: message }],
+            turnPlayer: newTurnPlayer
+        };
+        sockets.forEach((cur) => {
+            cur.gameState = newState;
         });
-        io.to(roomCode).emit('update game state', socket.gameState);
+        io.to(roomCode).emit('update game state', newState);
         socket.leave(roomCode);
-        socket.disconnect();
     }
     catch (err) {
         console.log('player leaving error in room ' + roomCode + ': ' + err);

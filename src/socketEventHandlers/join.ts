@@ -1,7 +1,7 @@
-import { Message, User, UserSocket } from "../types";
+import { GameState, Message, User, UserSocket } from "../types";
 import defaultGameState from '../gameMutators/defaultGameState';
 
-const join = async (roomCode: string, newPlayerName: string, newPlayerImage: string, socket: UserSocket, io: any) => {
+const join = async (gameState: GameState | null, roomCode: string, newPlayerName: string, newPlayerImage: string, socket: UserSocket, io: any) => {
     try {
         if(newPlayerName === '') {
             socket.emit('room join error', 'Name cannot be empty.');
@@ -18,16 +18,29 @@ const join = async (roomCode: string, newPlayerName: string, newPlayerImage: str
                 return;
             }
         }
+        const prevUser: User = gameState ? gameState.users.reduce((acc: User, cur: User) => {
+            return newPlayerName === cur.name ? cur : acc;
+        }, null) : null;
         socket.roomCode = roomCode;
-        socket.user = { name: newPlayerName, image: newPlayerImage, cards: [], points: 0, rank: '', possibleTradeCardNumbers: [], cardsFromTrade: [] };
+        socket.user = prevUser ? { ...prevUser, image: newPlayerImage } : { name: newPlayerName, image: newPlayerImage, cards: [], points: 0, rank: '', possibleTradeCardNumbers: [], cardsFromTrade: [] };
+        socket.gameState = sockets[0] && sockets[0].gameState ? { ...sockets[0].gameState } : defaultGameState;
         socket.join(roomCode);
         sockets = await io.in(roomCode).fetchSockets(); 
         const users: User[] = sockets.map((cur: UserSocket) => cur.user);
         let prevMessages: Message[] = sockets[0] && sockets[0].gameState && sockets[0].gameState.messages && sockets[0].gameState.messages.length > 0 ? sockets[0].gameState.messages : [];
-        const message = `${newPlayerName} joined the room.`;
+        const message = !gameState ? `${newPlayerName} joined the room.` : `${newPlayerName} reconnected.`;
         prevMessages = [...prevMessages, { sender: null, content: message }];
         const usersCopy: User[] = JSON.parse(JSON.stringify(users));
-        sockets.forEach(cur => cur.gameState = { ...defaultGameState, users: usersCopy, host: usersCopy[0].name, messages: prevMessages, roomCode: roomCode });
+        sockets.forEach(cur => {
+            cur.gameState = { 
+                ...cur.gameState, 
+                users: usersCopy, 
+                host: usersCopy[0].name, 
+                messages: prevMessages, 
+                roomCode: roomCode,
+                activeUsers: gameState && gameState.gameIsActive ? [...cur.gameState.activeUsers, prevUser] : cur.gameState.activeUsers
+            }
+        });   
         io.to(roomCode).emit('update game state', socket.gameState);
         console.log(message);
     } catch(err) {
