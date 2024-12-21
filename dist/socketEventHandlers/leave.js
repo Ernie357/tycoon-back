@@ -18,10 +18,12 @@ const leave = async (roomCode, activeRooms, socket, io) => {
         if (newUsers.length <= 0) {
             activeRooms.forEach((room) => {
                 if (room.roomCode === roomCode) {
+                    console.log(`${leavingUsername} left room ${roomCode}`);
                     console.log(`Room ${roomCode} has been disbanded.`);
                     activeRooms.delete(room);
                 }
             });
+            socket.leave(roomCode);
             return;
         }
         let newTurnPlayer = socket.gameState.turnPlayer;
