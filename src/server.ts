@@ -20,6 +20,7 @@ import sendChatMessage from "./socketEventHandlers/sendChatMessage";
 import sendEventChatMessage from "./socketEventHandlers/sendEventChatMessage";
 import disconnect from "./socketEventHandlers/disconnect";
 import defaultGameState from "./gameMutators/defaultGameState";
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -86,8 +87,12 @@ io.on('connection', (socket: UserSocket) => {
   });
 });
 
+const generateHash = (playerName: string, roomCode: string, secret: string): string => {
+  return crypto.createHmac('sha256', secret).update(`${playerName}:${roomCode}`).digest('hex');
+};
+
 app.get('/roomcode', (req: Request, res: Response) => {
-  const { name, isRoomPrivate } = req.query;
+  const { name, image, isRoomPrivate } = req.query;
   const isPrivate = isRoomPrivate === 'true' || isRoomPrivate === '1';
   try {
     let newGameState: GameState;
@@ -103,10 +108,26 @@ app.get('/roomcode', (req: Request, res: Response) => {
       });
     } while (roomCodeExists);
     activeRooms.add(newGameState); 
-    res.send(newGameState.roomCode);
+    const hash = generateHash(name.toString(), newGameState.roomCode, process.env.SECRET);
+    res.send(`/${newGameState.roomCode}?playerName=${encodeURIComponent(name.toString())}&playerImage=${encodeURIComponent(image.toString())}&hash=${hash}`);
   } catch(err) {
     console.log('error in generating random room code: ' + err);
     res.send(null);
+  }
+});
+
+app.get('/isRoomValid', (req: Request, res: Response) => {
+  try {
+    const { code, name, image, hash } = req.query;
+    const expectedHash = generateHash(name.toString(), code.toString(), process.env.SECRET);
+    if(!code || !name || !image || !hash || hash !== expectedHash) {
+      res.send(false);
+    } else {
+      res.send(true);
+    }
+  } catch(err) {
+    console.log('error in seeing if room is valid: ' + err);
+    res.send(false);
   }
 });
 
