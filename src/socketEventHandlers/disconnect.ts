@@ -1,9 +1,13 @@
-import { UserSocket } from "../types";
+import { GameState, UserSocket } from "../types";
 
-const disconnect = async (socket: UserSocket, activeRoomCodes: Set<string>) => {
+const disconnect = async (socket: UserSocket, activeRooms: Set<GameState>) => {
     try {
         if(socket.gameState && socket.gameState.users && socket.roomCode && socket.gameState.users.length <= 1) {
-          activeRoomCodes.delete(socket.roomCode);
+          activeRooms.forEach((room: GameState) => {
+            if(room.roomCode === socket.roomCode) {
+                activeRooms.delete(room);
+            }
+        });
         }
         console.log(`${socket.user.name} disconnected.`);
       } catch(err) {

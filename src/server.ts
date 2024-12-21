@@ -19,6 +19,7 @@ import endGame from "./socketEventHandlers/endGame";
 import sendChatMessage from "./socketEventHandlers/sendChatMessage";
 import sendEventChatMessage from "./socketEventHandlers/sendEventChatMessage";
 import disconnect from "./socketEventHandlers/disconnect";
+import defaultGameState from "./gameMutators/defaultGameState";
 
 dotenv.config();
 
@@ -38,14 +39,14 @@ const server = createServer(app);
 const io = new Server(server);
 //app.use(express.static(path.join(__dirname, '../front/build')));
 
-const activeRoomCodes = new Set<string>();
+const activeRooms = new Set<GameState>();
 
 io.on('connection', (socket: UserSocket) => {
   socket.on('join', (gameState: GameState, roomCode: string, playerName: string, playerImage: string) => {
-    join(gameState, roomCode, playerName, playerImage, socket, io);
+    join(gameState, roomCode, playerName, playerImage, activeRooms, socket, io);
   });
   socket.on('leave', (roomCode: string) => {
-    leave(roomCode, activeRoomCodes, socket, io);
+    leave(roomCode, activeRooms, socket, io);
   });
   socket.on('start game', (roomCode: string) => {
     startGame(roomCode, socket, io);
@@ -81,19 +82,28 @@ io.on('connection', (socket: UserSocket) => {
     sendEventChatMessage(roomCode, message, socket, io);
   });
   socket.on('disconnect', () => {
-    disconnect(socket, activeRoomCodes);
+    disconnect(socket, activeRooms);
   });
 });
 
 app.get('/roomcode', (req: Request, res: Response) => {
+  const { name, isRoomPrivate } = req.query;
+  const isPrivate = isRoomPrivate === 'true' || isRoomPrivate === '1';
   try {
-    let code: string;
+    let newGameState: GameState;
+    let roomCodeExists = false;
     do {
-        console.log('grabbing a code!');
-        code = Math.floor(10000 + Math.random() * 90000).toString();
-    } while (activeRoomCodes.has(code));
-    activeRoomCodes.add(code); 
-    res.send(code);
+        name ? console.log(`Grabbing a code for user "${name}", isRoomPrivate = ${isPrivate}`) : console.log('Could not find name for room code grab.');
+        const code = Math.floor(10000 + Math.random() * 90000).toString();
+        newGameState = { ...defaultGameState, roomCode: code, host: name ? name.toString() : '', isRoomPrivate: isPrivate };
+        activeRooms.forEach((room: GameState) => {
+          if(room.roomCode === code) {
+              roomCodeExists = true;
+          }
+      });
+    } while (roomCodeExists);
+    activeRooms.add(newGameState); 
+    res.send(newGameState.roomCode);
   } catch(err) {
     console.log('error in generating random room code: ' + err);
     res.send(null);
@@ -103,7 +113,13 @@ app.get('/roomcode', (req: Request, res: Response) => {
 app.get('/isRoomCodeValid', (req: Request, res: Response) => {
   try {
     const code = req.query.roomCode.toString();
-    if(activeRoomCodes.has(code)) {
+    let roomCodeExists = false;
+    activeRooms.forEach((room: GameState) => {
+      if(room.roomCode === code) {
+          roomCodeExists = true;
+      }
+    });
+    if(roomCodeExists) {
       res.send(true);
     } else {
       res.send(false);
@@ -111,6 +127,19 @@ app.get('/isRoomCodeValid', (req: Request, res: Response) => {
   } catch(err) {
     console.log('error in checking to see if room code is valid: ' + err);
     res.send(false);
+  }
+});
+
+app.get('/rooms', (req: Request, res: Response) => {
+  try {
+    const roomsArray = Array.from(activeRooms);
+    const validRooms = roomsArray.filter((room: GameState) => {
+      return room.users.length < 4 && room.users.length > 0 && !room.isRoomPrivate;
+    });
+    res.send(validRooms);
+  } catch(err) {
+    console.log('error in retrieving rooms: ' + err);
+    res.send(new Set<string>());
   }
 });
 

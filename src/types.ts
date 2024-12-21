@@ -36,7 +36,8 @@ export interface GameState {
     gameIsActive: boolean,
     host: string,
     messages: Message[],
-    roomCode: string
+    roomCode: string,
+    isRoomPrivate: boolean
 }
 
 export interface UserSocket extends Socket {

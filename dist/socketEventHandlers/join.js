@@ -4,7 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const defaultGameState_1 = __importDefault(require("../gameMutators/defaultGameState"));
-const join = async (gameState, roomCode, newPlayerName, newPlayerImage, socket, io) => {
+const updateRoom_1 = __importDefault(require("../gameMutators/updateRoom"));
+const join = async (gameState, roomCode, newPlayerName, newPlayerImage, activeRooms, socket, io) => {
     try {
         if (newPlayerName === '') {
             socket.emit('room join error', 'Name cannot be empty.');
@@ -31,11 +32,11 @@ const join = async (gameState, roomCode, newPlayerName, newPlayerImage, socket, 
         sockets = await io.in(roomCode).fetchSockets();
         const users = sockets.map((cur) => cur.user);
         let prevMessages = sockets[0] && sockets[0].gameState && sockets[0].gameState.messages && sockets[0].gameState.messages.length > 0 ? sockets[0].gameState.messages : [];
-        const message = !gameState ? `${newPlayerName} joined the room.` : `${newPlayerName} reconnected.`;
-        prevMessages = [...prevMessages, { sender: null, content: message }];
+        prevMessages = [...prevMessages, { sender: null, content: !gameState ? `${newPlayerName} joined the room.` : `${newPlayerName} reconnected.` }];
         const usersCopy = JSON.parse(JSON.stringify(users));
+        let newState;
         sockets.forEach(cur => {
-            cur.gameState = {
+            newState = {
                 ...cur.gameState,
                 users: usersCopy,
                 host: usersCopy[0].name,
@@ -43,9 +44,11 @@ const join = async (gameState, roomCode, newPlayerName, newPlayerImage, socket, 
                 roomCode: roomCode,
                 activeUsers: gameState && gameState.gameIsActive ? [...cur.gameState.activeUsers, prevUser] : cur.gameState.activeUsers
             };
+            cur.gameState = newState;
         });
-        io.to(roomCode).emit('update game state', socket.gameState);
-        console.log(message);
+        (0, updateRoom_1.default)(activeRooms, roomCode, newState);
+        io.to(roomCode).emit('update game state', newState);
+        console.log(`${newPlayerName} joined room ${roomCode}`);
     }
     catch (err) {
         console.log(newPlayerName + ' had an error joining room ' + roomCode + ': ' + err);

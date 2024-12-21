@@ -1,11 +1,11 @@
+import updateRoom from "../gameMutators/updateRoom";
 import { GameState, User, UserSocket } from "../types";
 
-const leave = async (roomCode: string, activeRoomCodes: Set<string>, socket: UserSocket, io: any) => {
+const leave = async (roomCode: string, activeRooms: Set<GameState>, socket: UserSocket, io: any) => {
     try {
         const sockets: UserSocket[] = await io.in(roomCode).fetchSockets();
         const leavingUsername = socket.user.name;
         const message = `${leavingUsername} left the room.`;
-        console.log(message);
         const newUsers = socket.gameState.users.filter((user: User) => {
             return user.name !== leavingUsername;
         });
@@ -13,7 +13,12 @@ const leave = async (roomCode: string, activeRoomCodes: Set<string>, socket: Use
             return user.name !== leavingUsername;
         });
         if(newUsers.length <= 0) {
-            activeRoomCodes.delete(roomCode);
+            activeRooms.forEach((room: GameState) => {
+                if(room.roomCode === roomCode) {
+                    console.log(`Room ${roomCode} has been disbanded.`);
+                    activeRooms.delete(room);
+                }
+            });
             return;
         }
         let newTurnPlayer = socket.gameState.turnPlayer;
@@ -39,8 +44,10 @@ const leave = async (roomCode: string, activeRoomCodes: Set<string>, socket: Use
         sockets.forEach((cur: UserSocket) => {
             cur.gameState = newState;
         });
+        updateRoom(activeRooms, roomCode, newState);
         io.to(roomCode).emit('update game state', newState);
         socket.leave(roomCode);
+        console.log(`${leavingUsername} left room ${roomCode}`);
     } catch(err) {
         console.log('player leaving error in room ' + roomCode + ': ' + err);
     }

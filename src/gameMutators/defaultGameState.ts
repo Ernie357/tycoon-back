@@ -14,6 +14,7 @@ const defaultGameState: GameState = {
     gameIsActive: false,
     host: '',
     messages: [],
-    roomCode: ''
+    roomCode: '',
+    isRoomPrivate: false
 }
 export default defaultGameState;

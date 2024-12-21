@@ -1,11 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const leave = async (roomCode, activeRoomCodes, socket, io) => {
+const updateRoom_1 = __importDefault(require("../gameMutators/updateRoom"));
+const leave = async (roomCode, activeRooms, socket, io) => {
     try {
         const sockets = await io.in(roomCode).fetchSockets();
         const leavingUsername = socket.user.name;
         const message = `${leavingUsername} left the room.`;
-        console.log(message);
         const newUsers = socket.gameState.users.filter((user) => {
             return user.name !== leavingUsername;
         });
@@ -13,7 +16,12 @@ const leave = async (roomCode, activeRoomCodes, socket, io) => {
             return user.name !== leavingUsername;
         });
         if (newUsers.length <= 0) {
-            activeRoomCodes.delete(roomCode);
+            activeRooms.forEach((room) => {
+                if (room.roomCode === roomCode) {
+                    console.log(`Room ${roomCode} has been disbanded.`);
+                    activeRooms.delete(room);
+                }
+            });
             return;
         }
         let newTurnPlayer = socket.gameState.turnPlayer;
@@ -40,8 +48,10 @@ const leave = async (roomCode, activeRoomCodes, socket, io) => {
         sockets.forEach((cur) => {
             cur.gameState = newState;
         });
+        (0, updateRoom_1.default)(activeRooms, roomCode, newState);
         io.to(roomCode).emit('update game state', newState);
         socket.leave(roomCode);
+        console.log(`${leavingUsername} left room ${roomCode}`);
     }
     catch (err) {
         console.log('player leaving error in room ' + roomCode + ': ' + err);

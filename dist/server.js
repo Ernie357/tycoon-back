@@ -23,6 +23,7 @@ const endGame_1 = __importDefault(require("./socketEventHandlers/endGame"));
 const sendChatMessage_1 = __importDefault(require("./socketEventHandlers/sendChatMessage"));
 const sendEventChatMessage_1 = __importDefault(require("./socketEventHandlers/sendEventChatMessage"));
 const disconnect_1 = __importDefault(require("./socketEventHandlers/disconnect"));
+const defaultGameState_1 = __importDefault(require("./gameMutators/defaultGameState"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -32,13 +33,13 @@ const port = 5001;
 const server = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(server);
 //app.use(express.static(path.join(__dirname, '../front/build')));
-const activeRoomCodes = new Set();
+const activeRooms = new Set();
 io.on('connection', (socket) => {
     socket.on('join', (gameState, roomCode, playerName, playerImage) => {
-        (0, join_1.default)(gameState, roomCode, playerName, playerImage, socket, io);
+        (0, join_1.default)(gameState, roomCode, playerName, playerImage, activeRooms, socket, io);
     });
     socket.on('leave', (roomCode) => {
-        (0, leave_1.default)(roomCode, activeRoomCodes, socket, io);
+        (0, leave_1.default)(roomCode, activeRooms, socket, io);
     });
     socket.on('start game', (roomCode) => {
         (0, startGame_1.default)(roomCode, socket, io);
@@ -74,18 +75,27 @@ io.on('connection', (socket) => {
         (0, sendEventChatMessage_1.default)(roomCode, message, socket, io);
     });
     socket.on('disconnect', () => {
-        (0, disconnect_1.default)(socket, activeRoomCodes);
+        (0, disconnect_1.default)(socket, activeRooms);
     });
 });
 app.get('/roomcode', (req, res) => {
+    const { name, isRoomPrivate } = req.query;
+    const isPrivate = isRoomPrivate === 'true' || isRoomPrivate === '1';
     try {
-        let code;
+        let newGameState;
+        let roomCodeExists = false;
         do {
-            console.log('grabbing a code!');
-            code = Math.floor(10000 + Math.random() * 90000).toString();
-        } while (activeRoomCodes.has(code));
-        activeRoomCodes.add(code);
-        res.send(code);
+            name ? console.log(`Grabbing a code for user "${name}", isRoomPrivate = ${isPrivate}`) : console.log('Could not find name for room code grab.');
+            const code = Math.floor(10000 + Math.random() * 90000).toString();
+            newGameState = { ...defaultGameState_1.default, roomCode: code, host: name ? name.toString() : '', isRoomPrivate: isPrivate };
+            activeRooms.forEach((room) => {
+                if (room.roomCode === code) {
+                    roomCodeExists = true;
+                }
+            });
+        } while (roomCodeExists);
+        activeRooms.add(newGameState);
+        res.send(newGameState.roomCode);
     }
     catch (err) {
         console.log('error in generating random room code: ' + err);
@@ -95,7 +105,13 @@ app.get('/roomcode', (req, res) => {
 app.get('/isRoomCodeValid', (req, res) => {
     try {
         const code = req.query.roomCode.toString();
-        if (activeRoomCodes.has(code)) {
+        let roomCodeExists = false;
+        activeRooms.forEach((room) => {
+            if (room.roomCode === code) {
+                roomCodeExists = true;
+            }
+        });
+        if (roomCodeExists) {
             res.send(true);
         }
         else {
@@ -105,6 +121,19 @@ app.get('/isRoomCodeValid', (req, res) => {
     catch (err) {
         console.log('error in checking to see if room code is valid: ' + err);
         res.send(false);
+    }
+});
+app.get('/rooms', (req, res) => {
+    try {
+        const roomsArray = Array.from(activeRooms);
+        const validRooms = roomsArray.filter((room) => {
+            return room.users.length < 4 && room.users.length > 0 && !room.isRoomPrivate;
+        });
+        res.send(validRooms);
+    }
+    catch (err) {
+        console.log('error in retrieving rooms: ' + err);
+        res.send(new Set());
     }
 });
 /*

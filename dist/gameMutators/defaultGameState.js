@@ -14,7 +14,8 @@ const defaultGameState = {
     gameIsActive: false,
     host: '',
     messages: [],
-    roomCode: ''
+    roomCode: '',
+    isRoomPrivate: false
 };
 exports.default = defaultGameState;
 //# sourceMappingURL=defaultGameState.js.map
